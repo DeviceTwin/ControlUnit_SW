@@ -15,13 +15,16 @@ static QueueHandle_t xQueue = NULL;
 void adc_task(void *pvParameters)
 {
     uint16_t uIValueToSend = 0;
+    adc_init();
+    adc_gpio_init(POT_PIN);
+    adc_select_input(0);
 
     while(true)
     {
         uIValueToSend = adc_read();
         uIValueToSend = (uIValueToSend - 0) * (255 - 0) / (4095 - 0) + 0;
         xQueueSend(xQueue, &uIValueToSend, 0U);
-        vTaskDelay(10);
+        vTaskDelay(10); //Allows pwm task execute (pwm lower priority)
     }
 }
 
@@ -46,13 +49,10 @@ void pwm_task(void *pvParameters)
 int main()
 {
     stdio_init_all();
-    adc_init();
-    adc_gpio_init(POT_PIN);
-    adc_select_input(0);
         
     xQueue = xQueueCreate(1, sizeof(uint16_t));
     
-    xTaskCreate(adc_task, "ADC_Task", 256, NULL, 1, NULL);
+    xTaskCreate(adc_task, "ADC_Task", 256, NULL, 2, NULL);
     xTaskCreate(pwm_task, "PWM_Task", 256, NULL, 1, NULL);
     vTaskStartScheduler();
 
